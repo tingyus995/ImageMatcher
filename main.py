@@ -22,12 +22,33 @@ class Window(QMainWindow):
         self.left_panel_layout.addWidget(self.root_dir_chooser)
 
         self.left_panel_layout.addWidget(QLabel("Target Image"))
-        self.target_file_chooser = FileChooser(title = 'Choose target image', filter = "Image Files (*.jpg *.jpeg *.png)")
+        self.target_file_chooser = FileChooser(
+            title='Choose target image', filter="Image Files (*.jpg *.jpeg *.png)")
         self.left_panel_layout.addWidget(self.target_file_chooser)
 
         self.index_btn = QPushButton("index")
         self.index_btn.clicked.connect(self._init_engine)
         self.left_panel_layout.addWidget(self.index_btn)
+
+        self.coarse_thresh_lb = QLabel()
+        self.left_panel_layout.addWidget(self.coarse_thresh_lb)
+        self.coarse_thresh_sld = QSlider()
+        self.coarse_thresh_sld.valueChanged.connect(lambda v: self.coarse_thresh_lb.setText(f"Coarse Thresh: {v}"))
+        self.coarse_thresh_sld.setOrientation(Qt.Horizontal)
+        self.coarse_thresh_sld.setMaximum(50)
+        self.coarse_thresh_sld.setMinimum(0)
+        self.coarse_thresh_sld.setValue(3)
+        self.left_panel_layout.addWidget(self.coarse_thresh_sld)
+
+        self.pixel_thresh_lb = QLabel()
+        self.left_panel_layout.addWidget(self.pixel_thresh_lb)
+        self.pixel_thresh_sld = QSlider()
+        self.pixel_thresh_sld.valueChanged.connect(lambda v: self.pixel_thresh_lb.setText(f"Pixel Thresh: {v}"))
+        self.pixel_thresh_sld.setOrientation(Qt.Horizontal)
+        self.pixel_thresh_sld.setMaximum(1000)
+        self.pixel_thresh_sld.setMinimum(0)
+        self.pixel_thresh_sld.setValue(200)
+        self.left_panel_layout.addWidget(self.pixel_thresh_sld)
 
         self.match_btn = QPushButton("match")
         self.match_btn.clicked.connect(self._handle_match_btn)
@@ -54,28 +75,32 @@ class Window(QMainWindow):
 
         self.main_layout.addLayout(self.right_panel_layout)
 
-
         widget = QWidget()
         widget.setLayout(self.main_layout)
         self.setCentralWidget(widget)
-    
+
     def _handle_match_btn(self):
-        matched = self.engine.match(self.target_file_chooser.get_path())
+        matched = self.engine.match(self.target_file_chooser.get_path(),
+                                    coarse_thresh=self.coarse_thresh_sld.value(),
+                                    pixel_thresh=self.pixel_thresh_sld.value())
         self.log_tb.append('\n'.join(matched))
-    
+
     def _handle_selection_changed(self):
-        path = self.engine.data(self.indexed_files_lv.selectionModel().selectedIndexes()[0], Qt.DisplayRole)
+        path = self.engine.data(
+            self.indexed_files_lv.selectionModel().selectedIndexes()[0], Qt.DisplayRole)
         pixmap = QPixmap(path)
         self.picture_view_lb.setPixmap(pixmap.scaledToWidth(300))
+
     def _init_engine(self):
 
         self.engine = Engine(self.root_dir_chooser.get_path())
-        self.engine.index_progress_updated.connect(lambda p: self.index_pb.setValue(int(p * 100)))
+        self.engine.index_progress_updated.connect(
+            lambda p: self.index_pb.setValue(int(p * 100)))
         Thread(target=lambda: self.engine.start_index()).start()
 
         self.indexed_files_lv.setModel(self.engine)
-        self.indexed_files_lv.selectionModel().selectionChanged.connect(self._handle_selection_changed)
-
+        self.indexed_files_lv.selectionModel().selectionChanged.connect(
+            self._handle_selection_changed)
 
 
 app = QApplication([])

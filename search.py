@@ -43,13 +43,13 @@ class Engine(QAbstractListModel):
         cx, cy = w // 2, h // 2
 
         return np.array([
-            np.mean(img[0:cy, :cx]).item(),  # top left
-            np.mean(img[0:cy, cx:]).item(),  # top right
-            np.mean(img[cy:, cx:]).item(),  # bottom right
-            np.mean(img[cy:, :cx]).item(),  # bottom left
-        ])
+            int(np.mean(img[0:cy, :cx]).item()),  # top left
+            int(np.mean(img[0:cy, cx:]).item()),  # top right
+            int(np.mean(img[cy:, cx:]).item()),  # bottom right
+            int(np.mean(img[cy:, :cx]).item()),  # bottom left
+        ], dtype=np.int32)
     
-    def _match(self, img1: np.ndarray, img2: np.ndarray, thresh = 0.25):
+    def _match(self, img1: np.ndarray, img2: np.ndarray, thresh = 200):
         thumb = img1
         full = img2
 
@@ -62,7 +62,7 @@ class Engine(QAbstractListModel):
 
         print(np.abs(np.mean((thumb - scaled_full))))
 
-        return np.abs(np.mean((thumb - scaled_full))) < h * w * thresh
+        return np.abs(np.mean((thumb - scaled_full))) < thresh
 
     def start_index(self):
 
@@ -85,9 +85,9 @@ class Engine(QAbstractListModel):
                     )
                 )
                 self.endInsertRows()
-            
 
-    def match(self, img_path):
+    def match(self, img_path, coarse_thresh = 3, pixel_thresh = 200):
+        print(coarse_thresh, pixel_thresh)
         target_img = self._imread(img_path)
         
         if target_img is None:
@@ -98,9 +98,11 @@ class Engine(QAbstractListModel):
         matched = []
 
         for item in self.indexed_items:
-            if np.abs(np.mean((item.coarse_features - target_features))) <= 3:
+            print(np.abs(np.mean((item.coarse_features - target_features))))
+            if np.abs(np.mean((item.coarse_features - target_features))) <= coarse_thresh:
+                print(item.file_path)
                 img = self._imread(item.file_path)
-                if self._match(target_img, img):
+                if self._match(target_img, img, thresh=pixel_thresh):
                     matched.append(item.file_path)
 
         return matched
